@@ -1,0 +1,41 @@
+# Dependency directories
+node_modules/
+.pnp
+.pnp.js
+
+# Environment secrets and local configurations
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Storage root & uploads (never commit uploaded files or temporary chunks)
+uploads/
+storage/
+.cache_uploads/
+.tmp_chunks/
+
+# Build outputs
+client/dist/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
