@@ -7,6 +7,8 @@ const { PORT, STORAGE_ROOT } = require('./config');
 const logger = require('./utils/logger');
 const authRoutes = require('./routes/authRoutes');
 const fileRoutes = require('./routes/fileRoutes');
+const shareRoutes = require('./routes/shareRoutes');
+const systemRoutes = require('./routes/systemRoutes');
 
 const app = express();
 
@@ -19,6 +21,8 @@ app.use(morgan('dev'));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/share', shareRoutes);
+app.use('/api/system', systemRoutes);
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
