@@ -193,42 +193,10 @@ function downloadFile(req, res) {
     }
 
     const filename = path.basename(absolutePath);
-    const contentType = mime.lookup(filename) || 'application/octet-stream';
-    const range = req.headers.range;
-
-    if (range) {
-      // Parse Range header (e.g., "bytes=1000-2000")
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : stats.size - 1;
-      const chunksize = end - start + 1;
-
-      if (start >= stats.size || end >= stats.size) {
-        res.status(416).set('Content-Range', `bytes */${stats.size}`);
-        return res.end();
-      }
-
-      res.writeHead(206, {
-        'Content-Range': `bytes ${start}-${end}/${stats.size}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunksize,
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`
-      });
-
-      const fileStream = fs.createReadStream(absolutePath, { start, end });
-      return fileStream.pipe(res);
-    } else {
-      res.writeHead(200, {
-        'Content-Length': stats.size,
-        'Accept-Ranges': 'bytes',
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`
-      });
-
-      const fileStream = fs.createReadStream(absolutePath);
-      return fileStream.pipe(res);
-    }
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+    return res.sendFile(absolutePath, { dotfiles: 'allow' }, (err) => {
+      if (err && !res.headersSent) res.status(500).end();
+    });
   } catch (err) {
     const status = err.status || 500;
     if (!res.headersSent) {
@@ -261,7 +229,9 @@ function streamFile(req, res) {
     const filename = path.basename(absolutePath);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
-    return res.sendFile(absolutePath);
+    return res.sendFile(absolutePath, { dotfiles: 'allow' }, (err) => {
+      if (err && !res.headersSent) res.status(500).end();
+    });
   } catch (err) {
     const status = err.status || 500;
     if (!res.headersSent) {
