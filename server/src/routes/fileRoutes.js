@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authenticateToken = require('../middleware/auth');
+const { authenticateToken, requireOwner } = require('../middleware/auth');
 const {
   listDirectory,
   createFolder,
@@ -12,7 +12,8 @@ const {
   uploadChunk,
   getUploadStatus,
   completeUpload,
-  downloadFile
+  downloadFile,
+  streamFile
 } = require('../controllers/uploadController');
 
 // All file and folder endpoints require JWT authentication
@@ -21,14 +22,16 @@ router.use(authenticateToken);
 // Folder & File Management
 router.get('/list', listDirectory);
 router.post('/folder', createFolder);
-router.put('/rename', renameItem);
-router.delete('/delete', deleteItem);
-router.post('/bulk-delete', bulkDelete);
+router.put('/rename', requireOwner, renameItem);
+router.delete('/delete', requireOwner, deleteItem);
+router.post('/bulk-delete', requireOwner, bulkDelete);
 
 // Chunked Resumable Uploads & Streaming Downloads
 router.post('/upload/chunk', uploadChunk);
 router.get('/upload/status', getUploadStatus);
 router.post('/upload/complete', completeUpload);
 router.get('/download', downloadFile);
+router.get('/stream', streamFile);
+router.get('/preview', streamFile);
 
 module.exports = router;
