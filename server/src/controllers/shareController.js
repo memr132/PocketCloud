@@ -7,7 +7,7 @@ const { resolveSafePath, getRelativePath } = require('../utils/pathSanitizer');
 const logger = require('../utils/logger');
 
 function getSharesFilePath() {
-  const dataDir = path.resolve(__dirname, '../../data');
+  const dataDir = path.resolve(__dirname, '../data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
@@ -228,41 +228,11 @@ function downloadSharedFile(req, res) {
     }
 
     const filename = path.basename(absolutePath);
-    const contentType = require('mime-types').lookup(filename) || 'application/octet-stream';
-    const range = req.headers.range;
-
-    if (range) {
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : stats.size - 1;
-      const chunksize = end - start + 1;
-
-      if (start >= stats.size || end >= stats.size) {
-        res.status(416).set('Content-Range', `bytes */${stats.size}`);
-        return res.end();
-      }
-
-      res.writeHead(206, {
-        'Content-Range': `bytes ${start}-${end}/${stats.size}`,
-        'Accept-Ranges': 'bytes',
-        'Content-Length': chunksize,
-        'Content-Type': contentType,
-        'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`
-      });
-
-      const fileStream = fs.createReadStream(absolutePath, { start, end });
-      return fileStream.pipe(res);
-    } else {
-      res.writeHead(200, {
-        'Content-Length': stats.size,
-        'Accept-Ranges': 'bytes',
-        'Content-Type': contentType,
-        'Content-Disposition': `inline; filename="${encodeURIComponent(filename)}"`
-      });
-
-      const fileStream = fs.createReadStream(absolutePath);
-      return fileStream.pipe(res);
-    }
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
+    return res.sendFile(absolutePath, { dotfiles: 'allow' }, (err) => {
+      if (err && !res.headersSent) res.status(500).end();
+    });
   } catch (err) {
     if (!res.headersSent) {
       return res.status(500).json({ success: false, error: err.message });

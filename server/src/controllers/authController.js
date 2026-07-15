@@ -6,7 +6,7 @@ const { ADMIN_PASSWORD_HASH, JWT_SECRET, STORAGE_ROOT } = require('../config');
 const logger = require('../utils/logger');
 
 function getUsersFilePath() {
-  const dataDir = path.resolve(__dirname, '../../data');
+  const dataDir = path.resolve(__dirname, '../data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
