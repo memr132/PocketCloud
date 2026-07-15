@@ -237,9 +237,43 @@ function downloadFile(req, res) {
   }
 }
 
+/**
+ * Streams media or previews files inline (`GET /api/files/stream?path=...` or `preview?path=...`)
+ */
+function streamFile(req, res) {
+  try {
+    const filePath = req.query.path;
+    if (!filePath) {
+      return res.status(400).json({ success: false, error: 'path query parameter is required.' });
+    }
+
+    const absolutePath = resolveSafePath(filePath);
+
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ success: false, error: 'File not found.' });
+    }
+
+    const stats = fs.statSync(absolutePath);
+    if (stats.isDirectory()) {
+      return res.status(400).json({ success: false, error: 'Cannot stream a folder directly.' });
+    }
+
+    const filename = path.basename(absolutePath);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(filename)}"`);
+    return res.sendFile(absolutePath);
+  } catch (err) {
+    const status = err.status || 500;
+    if (!res.headersSent) {
+      return res.status(status).json({ success: false, error: err.message });
+    }
+  }
+}
+
 module.exports = {
   uploadChunk,
   getUploadStatus,
   completeUpload,
-  downloadFile
+  downloadFile,
+  streamFile
 };

@@ -31,8 +31,14 @@ async function listDirectory(req, res) {
     const formattedItems = [];
 
     for (const item of items) {
-      // Ignore hidden files / temporary chunk directories
-      if (item.name.startsWith('.cache_uploads') || item.name.startsWith('.tmp_chunks')) {
+      // Ignore hidden files / temporary chunk directories / internal metadata files
+      if (
+        item.name.startsWith('.') ||
+        item.name === 'shares.json' ||
+        item.name === 'users.json' ||
+        item.name === '.shares.json' ||
+        item.name === '.users.json'
+      ) {
         continue;
       }
 
