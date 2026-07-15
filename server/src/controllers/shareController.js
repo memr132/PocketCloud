@@ -7,18 +7,27 @@ const { resolveSafePath, getRelativePath } = require('../utils/pathSanitizer');
 const logger = require('../utils/logger');
 
 function getSharesFilePath() {
-  const dataDir = path.resolve(__dirname, '../data');
+  const dataDir = path.join(STORAGE_ROOT, '.system_data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
   const newPath = path.join(dataDir, 'shares.json');
-  // Migrate old file from STORAGE_ROOT if present
-  const oldPath = path.join(STORAGE_ROOT, '.shares.json');
-  if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
-    try {
-      fs.copyFileSync(oldPath, newPath);
-      fs.unlinkSync(oldPath);
-    } catch (e) {}
+  // Migrate old files if present
+  const oldPaths = [
+    path.join(STORAGE_ROOT, '.shares.json'),
+    path.join(STORAGE_ROOT, 'shares.json'),
+    path.resolve(__dirname, '../../data/shares.json'),
+    path.resolve(__dirname, '../data/shares.json')
+  ];
+  if (!fs.existsSync(newPath)) {
+    for (const old of oldPaths) {
+      if (fs.existsSync(old)) {
+        try {
+          fs.copyFileSync(old, newPath);
+          break;
+        } catch (e) {}
+      }
+    }
   }
   return newPath;
 }
