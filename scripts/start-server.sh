@@ -40,10 +40,7 @@ else
   echo "[2/5] Verified .env configuration file found."
 fi
 
-# Load environment variables (exporting them for ngrok and server)
-set -a
-source "$PROJECT_ROOT/.env"
-set +a
+# Node.js server/src/config.js handles .env loading via dotenv directly.
 
 PORT=${PORT:-8080}
 
@@ -71,15 +68,37 @@ else
   echo "      Local server is live at http://127.0.0.1:$PORT"
 fi
 
-# 5. Start Ngrok Tunnel
-echo "[5/5] Starting Ngrok HTTPS Tunnel to port $PORT..."
-if ! command -v ngrok >/dev/null 2>&1; then
-  echo "      [Warning] 'ngrok' command not found in PATH."
-  echo "      To install ngrok in Termux:"
-  echo "        1. Download ARM64 binaries or use: pkg install ngrok (if available)"
-  echo "        2. Run: ngrok config add-authtoken <your_token>"
-  echo "      Server is currently running locally only on http://127.0.0.1:$PORT"
-else
+# 5. Start Tunnel (Cloudflare cloudflared or Ngrok)
+echo "[5/5] Starting Public HTTPS Tunnel to port $PORT..."
+
+if command -v cloudflared >/dev/null 2>&1; then
+  echo "      Using Cloudflare Tunnel (cloudflared)..."
+  pkill -f cloudflared 2>/dev/null
+  cloudflared tunnel --url "http://127.0.0.1:$PORT" --logfile "$LOG_DIR/cloudflared.log" >/dev/null 2>&1 &
+  TUNNEL_PID=$!
+  echo " $TUNNEL_PID" >> "$PID_FILE"
+
+  echo "      Waiting for Cloudflare to establish tunnel URL..."
+  sleep 6
+
+  CLOUDFLARED_URL=$(grep -o 'https://[a-zA-Z0-9.\-]*\.trycloudflare\.com' "$LOG_DIR/cloudflared.log" | tail -n 1)
+  if [ -n "$CLOUDFLARED_URL" ]; then
+    echo ""
+    echo "========================================================================"
+    echo "   🚀 POCKETCLOUD IS ONLINE VIA CLOUDFLARE TUNNEL!"
+    echo "   Public URL: $CLOUDFLARED_URL"
+    echo "   Local URL:  http://127.0.0.1:$PORT"
+    echo "   Logs:       $LOG_DIR/server.log"
+    echo "========================================================================"
+    echo "To stop the server and release Termux wakelock, run:"
+    echo "  bash scripts/stop-server.sh"
+    echo "========================================================================"
+  else
+    echo "      [Notice] Cloudflare tunnel started (PID: $TUNNEL_PID), but URL not ready yet."
+    echo "      Check $LOG_DIR/cloudflared.log for your https://*.trycloudflare.com link."
+  fi
+elif command -v ngrok >/dev/null 2>&1; then
+  echo "      Using Ngrok Tunnel..."
   # Apply authtoken if present in .env
   if [ -n "$NGROK_AUTHTOKEN" ] && [ "$NGROK_AUTHTOKEN" != "your_ngrok_auth_token_here" ]; then
     ngrok config add-authtoken "$NGROK_AUTHTOKEN" >/dev/null 2>&1
@@ -102,7 +121,7 @@ else
   if [ -n "$NGROK_URL" ]; then
     echo ""
     echo "========================================================================"
-    echo "   POCKETCLOUD IS ONLINE & TUNNELED VIA NGROK!"
+    echo "   🚀 POCKETCLOUD IS ONLINE & TUNNELED VIA NGROK!"
     echo "   Public URL: $NGROK_URL"
     echo "   Local URL:  http://127.0.0.1:$PORT"
     echo "   Logs:       $LOG_DIR/server.log"
@@ -111,7 +130,11 @@ else
     echo "  bash scripts/stop-server.sh"
     echo "========================================================================"
   else
-    echo "      [Notice] Ngrok started (PID: $NGROK_PID), but could not immediately query tunnel URL."
+    echo "      [Notice] Ngrok started (PID: $NGROK_PID), but could not immediately query tunnel URL or segfaulted."
     echo "      Check http://127.0.0.1:4040/ status dashboard or $LOG_DIR/ngrok.log."
   fi
+else
+  echo "      [Warning] Neither 'cloudflared' nor 'ngrok' found in PATH."
+  echo "      To install Cloudflare tunnel in Termux: pkg install cloudflared"
+  echo "      Server is currently running locally only on http://127.0.0.1:$PORT"
 fi
